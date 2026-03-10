@@ -1,0 +1,20 @@
+{
+    "name": "2digit/standalone_tracking",
+    "description": "2DIGIT - Standalone tracking software for WooCommerce",
+    "require": {
+        "facebook/php-business-sdk": "^15.0"
+    },
+    "config": {
+        "platform-check": false
+    },
+    "autoload": {
+        "psr-4": {
+            "2digit\\StandaloneTracking\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "2DIGIT d.o.o."
+        }
+    ]
+}
