@@ -15,7 +15,6 @@ use Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableControlle
 class Flores_Woocommerce_Admin {
 
 	protected $standalone_options;
-	protected $duplicate_order_options;
 
 	private $plugin_name;
 	private $version;
@@ -116,13 +115,10 @@ class Flores_Woocommerce_Admin {
 
 	public function options_create_admin_page() {
 		$this->standalone_options = get_option( 'standalone_option_config' ); 
-		$this->duplicate_order_options = get_option( 'flores_duplicates_options' ); 
 		
 		$this->set_defaults($this->standalone_options);
-		$this->set_duplicate_defaults($this->duplicate_order_options);
 
 		$this->standalone_options = get_option( 'standalone_option_config' );
-		$this->duplicate_order_options = get_option( 'flores_duplicates_options' ); 
 
 		$preview = $this->get_preview($this->standalone_options);
 
@@ -140,26 +136,12 @@ class Flores_Woocommerce_Admin {
 
 			<nav class="nav-tab-wrapper">
 				<a href="?page=flores" class="nav-tab <?php if($tab===null):?>nav-tab-active<?php endif; ?>"><?php echo __("Dashboard", "flores-woocommerce") ?></a>
-				<a href="?page=flores&tab=duplicate-order" class="nav-tab <?php if($tab==='duplicate-order'):?>nav-tab-active<?php endif; ?>"><?php echo __("Duplicate order prevention", "flores-woocommerce") ?></a>
 				<a href="?page=flores&tab=status" class="nav-tab <?php if($tab==='status'):?>nav-tab-active<?php endif; ?>"><?php echo __("Status", "flores-woocommerce") ?></a>
 				<a href="?page=flores&tab=advanced" class="nav-tab <?php if($tab==='advanced'):?>nav-tab-active<?php endif; ?>"><?php echo __("Advanced", "flores-woocommerce") ?></a>
 			</nav>
 
 			<div class="tab-content">
 				<?php switch($tab) :
-				case 'duplicate-order':
-					?>
-					<?php settings_errors(); ?>
-					<form method="POST" action="options.php">
-						<?php
-							settings_fields( 'flores_duplicates_option_group' );
-							do_settings_sections( 'flores-admin' );
-							submit_button();
-						?>
-						<?php wp_nonce_field( 'duplicate_prevention', 'flores_duplicate_prevent_nonce' ); ?>
-					</form>
-					<?php
-					break;
 				case 'status':
 					?>
 					<?php $this->status_manager->test_databases(); ?>
@@ -246,20 +228,6 @@ class Flores_Woocommerce_Admin {
 		update_option('standalone_option_config', $options);
 	}
 
-	public function set_duplicate_defaults($options) {
-		$indexes = [
-			'restriction_time' => 24,
-			'order_prevention_text' => "You have already placed an order on our site at [time_of_order] - that's why cash on delivery is not available to you. Feel free to use another payment method or contact our customer service at info@mysite.com. Your order number is [order_number].",
-		];
-
-		foreach($indexes as $index => $value) {
-			if(! isset($options[$index]) || empty($options[$index]))
-				$options[$index] = $value;
-		}
-
-		update_option('flores_duplicates_options', $options);
-	}
-
 	public function options_page_init() {
 		register_setting(
 			'standalone_option_group',
@@ -286,37 +254,16 @@ class Flores_Woocommerce_Admin {
 		add_settings_field( 'placement', '{{placement}}', array( $this, 'placement_callback' ), 'options-admin', 'options_setting_section' );
 		add_settings_field( 'cookie_lifetime', 'Cookie lifetime', array( $this, 'cookie_lifetime_callback' ), 'options-admin', 'options_setting_section' );
 		add_settings_field( 'visitor_lifetime', 'Unique visitor lifetime', array( $this, 'visitor_lifetime_callback' ), 'options-admin', 'options_setting_section' );
-
-		register_setting(
-			'flores_duplicates_option_group',
-			'flores_duplicates_options',
-			array( $this, 'options_sanitize' )
-		);
-
-		add_settings_section(
-			'flores_duplicates_setting_section',
-			'Duplicate order prevention',
-			array( $this, 'options_section_info' ),
-			'flores-admin'
-		);
-
-		add_settings_field( 'enable_duplicate_prevention', 'Enable duplicate prevention module', array( $this, 'enable_duplicate_prevention_callback' ), 'flores-admin', 'flores_duplicates_setting_section' );
-		add_settings_field( 'restriction_time', 'Restriction time (hours):', array( $this, 'restriction_time_callback' ), 'flores-admin', 'flores_duplicates_setting_section' );
-		add_settings_field( 'order_prevention_text', 'Notification text on duplicate prevention', array( $this, 'order_prevention_text_callback' ), 'flores-admin', 'flores_duplicates_setting_section' );
 	}
 
 	public function options_sanitize($input) {
 		$sanitary_values = array();
-		$text_fields = ['site_source_name', 'utm_medium', 'utm_medium_value', 'campaign_name', 'adset_name', 'ad_name', 'campaign_id', 'adset_id', 'ad_id', 'placement', 'cookie_lifetime', 'visitor_lifetime', 'restriction_time', 'order_prevention_text'];
+		$text_fields = ['site_source_name', 'utm_medium', 'utm_medium_value', 'campaign_name', 'adset_name', 'ad_name', 'campaign_id', 'adset_id', 'ad_id', 'placement', 'cookie_lifetime', 'visitor_lifetime'];
 		
 		foreach($text_fields as $field) {
 			if ( isset( $input[$field] ) ) {
 				$sanitary_values[$field] = sanitize_text_field( $input[$field] );
 			}
-		}
-
-		if ( isset( $input['enable_duplicate_prevention'] ) ) {
-			$sanitary_values['enable_duplicate_prevention'] = $input['enable_duplicate_prevention'];
 		}
 
 		return $sanitary_values;
@@ -370,25 +317,6 @@ class Flores_Woocommerce_Admin {
 
 	public function visitor_lifetime_callback() {
 		printf( '<input class="regular-text" type="number" name="standalone_option_config[visitor_lifetime]" id="visitor_lifetime" value="%s">', isset( $this->standalone_options['visitor_lifetime'] ) ? esc_attr( $this->standalone_options['visitor_lifetime']) : '' );
-	}
-
-	public function enable_duplicate_prevention_callback() {
-		printf( '<input type="checkbox" name="flores_duplicates_options[enable_duplicate_prevention]" id="enable_duplicate_prevention" value="enable_duplicate_prevention" %s>',
-			( isset( $this->duplicate_order_options['enable_duplicate_prevention'] ) && $this->duplicate_order_options['enable_duplicate_prevention'] === 'enable_duplicate_prevention' ) ? 'checked' : '' );
-	}
-
-	public function restriction_time_callback() {
-		printf( '<input class="regular-text" type="number" name="flores_duplicates_options[restriction_time]" id="restriction_time" value="%s">', isset( $this->duplicate_order_options['restriction_time'] ) ? esc_attr( $this->duplicate_order_options['restriction_time']) : '' );
-	}
-
-	public function order_prevention_text_callback() {
-		printf( '<textarea class="regular-text" rows="10" name="flores_duplicates_options[order_prevention_text]" id="order_prevention_text">%s</textarea>',
-			isset( $this->duplicate_order_options['order_prevention_text'] ) ? esc_attr( $this->duplicate_order_options['order_prevention_text']) : '' );
-		?>
-		<div class="florex-available-inputs">
-			<?php echo __("Available values: ", "flores-woocommerce") ?><b>[date_of_order]</b>, <b>[time_of_order]</b>, <b>[order_number]</b>
-		</div>
-		<?php
 	}
 
 	function flores_render_journey_metabox() {

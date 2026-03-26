@@ -15,7 +15,6 @@ class Flores_Woocommerce_Public {
 	private $plugin_name;
 	private $version;
 	private $db_manager;
-	protected $duplicate_options;
 
 	public function __construct( $plugin_name, $version ) {
 
@@ -27,11 +26,6 @@ class Flores_Woocommerce_Public {
 		add_action('wp', [$this, 'flores_init']);
 
 		add_action( 'woocommerce_checkout_order_processed', [$this, 'flores_order_processed'], 10, 3 );
-
-		$this->duplicate_options = get_option( 'flores_duplicates_options' );
-		if(isset($this->duplicate_options['enable_duplicate_prevention'])) {
-			add_action( 'woocommerce_after_checkout_validation', [$this, 'flores_validation_disable_cod_prevent_spam'], 10, 2 );
-		}
 	}
 
 	public function enqueue_styles() {
@@ -370,44 +364,4 @@ class Flores_Woocommerce_Public {
 		);
 	}
 
-	function flores_validation_disable_cod_prevent_spam( $fields, $errors ) {
-		global $wpdb;
-
-		$email = $fields['billing_email'];
-		$gmt_offset = get_option('gmt_offset');
-
-		$hours_from = (isset($this->duplicate_options['restriction_time'])) ? $this->duplicate_options['restriction_time'] : 24;
-		$hours_from += $gmt_offset ?? 0;
-		$date_from = gmdate("Y-m-d H:i:s", strtotime("-$hours_from hours"));
-		$date_to = gmdate("Y-m-d H:i:s", strtotime("$gmt_offset hours"));
-
-		$orders = $wpdb->get_results( $wpdb->prepare(
-			"SELECT id FROM {$wpdb->posts} 
-			WHERE post_type = %s 
-			AND post_status NOT IN ('wc-failed', 'wc-cancelled') 
-			AND post_date BETWEEN %s AND %s
-		", 'shop_order', $date_from, $date_to) );
-
-		$payment_method = $fields['payment_method'];
-
-		if($orders) {
-			foreach($orders as $order) {
-				$order = wc_get_order($order->id);
-				if($email == $order->get_billing_email() && $payment_method == 'cod') {
-					$order_number = $order->get_order_number();
-					$order_date = strtotime($order->get_date_created()) + ($gmt_offset * 3600);
-					$datum = gmdate('j.n.Y', ($order_date));
-					$ura = gmdate('H:i', ($order_date));
-
-					$text = $this->duplicate_options['order_prevention_text'];
-					$text = str_replace("[date_of_order]", $datum, $text);
-					$text = str_replace("[time_of_order]", $ura, $text);
-					$text = str_replace("[order_number]", $order_number, $text);
-
-					$errors->add( 'validation', esc_html($text));
-					break;
-				}
-			}
-		}
-	}
 }
