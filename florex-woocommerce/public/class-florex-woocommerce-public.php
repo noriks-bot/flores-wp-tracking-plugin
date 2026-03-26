@@ -3,63 +3,20 @@
 /**
  * The public-facing functionality of the plugin.
  *
- * @link       https://#
+ * @link       https://noriks.com
  * @since      1.0.0
  *
- * @package    Florex_Woocommerce
- * @subpackage Florex_Woocommerce/public
+ * @package    Flores_Woocommerce
+ * @subpackage Flores_Woocommerce/public
  */
 
-/**
- * The public-facing functionality of the plugin.
- *
- * Defines the plugin name, version, and two examples hooks for how to
- * enqueue the public-facing stylesheet and JavaScript.
- *
- * @package    Florex_Woocommerce
- * @subpackage Florex_Woocommerce/public
- * @author     2DIGIT d.o.o. <florjan@2digit.eu>
- */
-class Florex_Woocommerce_Public {
+class Flores_Woocommerce_Public {
 
-	/**
-	 * The ID of this plugin.
-	 *
-	 * @since    1.0.0
-	 * @access   private
-	 * @var      string    $plugin_name    The ID of this plugin.
-	 */
 	private $plugin_name;
-
-	/**
-	 * The version of this plugin.
-	 *
-	 * @since    1.0.0
-	 * @access   private
-	 * @var      string    $version    The current version of this plugin.
-	 */
 	private $version;
-
-	/**
-	 * Database manager
-	 *
-	 * @since    1.0.0
-	 * @access   private
-	 * @var      Florex_Woocommerce_Db_Manager    $db_manager
-	 */
 	private $db_manager;
-
-	protected $access_token;
-
 	protected $duplicate_options;
 
-	/**
-	 * Initialize the class and set its properties.
-	 *
-	 * @since    1.0.0
-	 * @param      string    $plugin_name       The name of the plugin.
-	 * @param      string    $version    The version of this plugin.
-	 */
 	public function __construct( $plugin_name, $version ) {
 
 		$this->plugin_name = $plugin_name;
@@ -67,47 +24,30 @@ class Florex_Woocommerce_Public {
 
 		$this->load_dependencies();
 
-		add_action('wp', [$this, 'digit_init']);
+		add_action('wp', [$this, 'flores_init']);
 
-		add_action( 'woocommerce_checkout_order_processed', [$this, 'digit_standalone_order_processed'], 10, 3 );
+		add_action( 'woocommerce_checkout_order_processed', [$this, 'flores_order_processed'], 10, 3 );
 
-		$this->duplicate_options = get_option( 'florex_duplicates_options' );
+		$this->duplicate_options = get_option( 'flores_duplicates_options' );
 		if(isset($this->duplicate_options['enable_duplicate_prevention'])) {
-			add_action( 'woocommerce_after_checkout_validation', [$this, 'digit_validation_disable_cod_prevent_spam'], 10, 2 );
+			add_action( 'woocommerce_after_checkout_validation', [$this, 'flores_validation_disable_cod_prevent_spam'], 10, 2 );
 		}
-		$this->access_token = (get_option('standalone_meta_conversion_api')) ? get_option('standalone_meta_conversion_api') : null;
-
 	}
 
-	/**
-	 * Register the stylesheets for the public-facing side of the site.
-	 *
-	 * @since    1.0.0
-	 */
 	public function enqueue_styles() {
-
 		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/florex-woocommerce-public.css', array(), $this->version, 'all' );
-
 	}
 
-	/**
-	 * Register the JavaScript for the public-facing side of the site.
-	 *
-	 * @since    1.0.0
-	 */
 	public function enqueue_scripts() {
-
-		//wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/florex-woocommerce-public.js', array( 'jquery' ), $this->version, false );
-
+		// Scripts enqueued here if needed
 	}
 
 	public function load_dependencies() {
 		require_once plugin_dir_path( __FILE__ ) . 'partials/class-florex-woocommerce-db-manager.php';
-
-		$this->db_manager = new Florex_Woocommerce_Db_Manager();
+		$this->db_manager = new Flores_Woocommerce_Db_Manager();
 	}
 
-	public function digit_init() {
+	public function flores_init() {
 
 		if(! $this->_bot_detected() && ! current_user_can('administrator')) {
 			
@@ -135,10 +75,10 @@ class Florex_Woocommerce_Public {
 			}
 		
 			if(count($_GET)) {
-				$available_parameters = $this->digit_get_option_indexes();
+				$available_parameters = $this->flores_get_option_indexes();
 				
 				foreach($_GET as $key => $value) {
-					if(! in_array("h_ad_id", $available_parameters) && $key == "h_ad_id") $key = "florex_id";
+					if(! in_array("h_ad_id", $available_parameters) && $key == "h_ad_id") $key = "flores_id";
 					
 					if(in_array($key, $available_parameters)) {
 						$params[$key] = $value;
@@ -150,7 +90,7 @@ class Florex_Woocommerce_Public {
 				if(isset($sku) && ! empty($sku)) {
 					if(! isset($_COOKIE['stdln_vsts'])) {
 						$visits = [get_the_ID()];
-						$this->digit_insert_sku_event($post_id, $sku, "visit");
+						$this->flores_insert_sku_event($post_id, $sku, "visit");
 						setcookie("stdln_vsts", json_encode($visits), time() + ($days * 86400), '/');
 					} else {
 						$visits = sanitize_key($_COOKIE['stdln_vsts']);
@@ -158,31 +98,29 @@ class Florex_Woocommerce_Public {
 							$visits = json_decode($visits);
 							if(is_array($visits) && ! in_array($post_id, $visits)) {
 								array_push($visits, $post_id);
-								$this->digit_insert_sku_event($post_id, $sku, "visit");
+								$this->flores_insert_sku_event($post_id, $sku, "visit");
 								setcookie("stdln_vsts", json_encode($visits), time() + ($days * 86400), '/');
 							}
 						} catch(Exception $e) {
-							error_log("Florex Tracking plugin - somebody was trying to mess with cookies, came from ($referer , $site)");
+							error_log("Flores Tracking plugin - cookie manipulation detected");
 						}
 					}
 				}
 			}
 
-			//if(count($params) > 0) {
-				if (! isset($_COOKIE['stdln_hash'])) {
-					$hash = hexdec(uniqid());
-					$this->digit_init_wc_cookie($hash);
-					setcookie("stdln_hash", $hash, time() + ($days * 86400), '/');
-				} else {
-					$hash = sanitize_key($_COOKIE['stdln_hash']);
-				}
+			if (! isset($_COOKIE['stdln_hash'])) {
+				$hash = hexdec(uniqid());
+				$this->flores_init_wc_cookie($hash);
+				setcookie("stdln_hash", $hash, time() + ($days * 86400), '/');
+			} else {
+				$hash = sanitize_key($_COOKIE['stdln_hash']);
+			}
 
-				$this->digit_filter_and_insert_metadata($hash, $params);
-			//}
+			$this->flores_filter_and_insert_metadata($hash, $params);
 		}
 	}
 
-	protected function digit_init_wc_cookie($hash) {
+	protected function flores_init_wc_cookie($hash) {
 		if(isset(WC()->session)) {
 			if (! WC()->session->has_session() ) {
 				WC()->session->set_customer_session_cookie( true );
@@ -191,7 +129,7 @@ class Florex_Woocommerce_Public {
 		}
 	}
 
-	function digit_get_option_indexes() {
+	function flores_get_option_indexes() {
 		$standalone_options = get_option( 'standalone_option_config' );
 
 		if(! isset($standalone_options)) return array();
@@ -215,42 +153,39 @@ class Florex_Woocommerce_Public {
 				array_push($result, $standalone_options[$index]);
 		}
 
-		array_push($result, 'florex_id');
-        array_push($result, 'campaign_id');
-        array_push($result, 'adset_id');
-        array_push($result, 'ad_id');
+		array_push($result, 'flores_id');
+		array_push($result, 'campaign_id');
+		array_push($result, 'adset_id');
+		array_push($result, 'ad_id');
 
 		return $result;
 	}
 
-	function digit_get_index_by_value($options, $option_value) {
+	function flores_get_index_by_value($options, $option_value) {
 		if(is_array($options) && count($options) > 0) {
 			foreach($options as $key => $value) {
 				if($value == $option_value || ($option_value == "ad_id" && $value == "ad_id"))
 					return $key;
 			}
 		}
-
 		return false;
 	}
 
-	protected function digit_insert_sku_event($post_id, $sku, $event) {
+	protected function flores_insert_sku_event($post_id, $sku, $event) {
 		$id_product = wc_get_product_id_by_sku($sku);
-
-		if(isset($id_product) && is_numeric($id_product)) { // check if product with provided SKU exists
-			// insert
+		if(isset($id_product) && is_numeric($id_product)) {
 			$this->db_manager->insertSKUEvent($post_id, $sku, $event);
 		}
 	}
 
-	protected function digit_group_landing_url($url) {
+	protected function flores_group_landing_url($url) {
 		$url = rtrim(str_replace(array('http://','https://'), '', $url), "/");
 
 		$cartboss = ["abandoned_cart"];
 		$facebook = ["facebook", "fb", "an"];
 		$instagram = ["instagram", "ig"];
 		$google = ["google"];
-        $tiktok = ["tiktok"];
+		$tiktok = ["tiktok"];
 
 		if( preg_match("(".implode("|",array_map("preg_quote",$cartboss)).")i",$url,$m)) {
 			return "abandoned_cart";
@@ -261,52 +196,49 @@ class Florex_Woocommerce_Public {
 		} elseif( preg_match("(".implode("|",array_map("preg_quote",$google)).")i",$url,$m)) {
 			return "google";
 		} elseif( preg_match("(".implode("|",array_map("preg_quote",$tiktok)).")i",$url,$m)) {
-            return "tiktok";
-        } else {
+			return "tiktok";
+		} else {
 			return $url;
 		}
 	}
 
-	function digit_filter_and_insert_metadata($hash, $params) {
+	function flores_filter_and_insert_metadata($hash, $params) {
 
 		if(! isset($hash)) return array();
 
 		$standalone_options = get_option( 'standalone_option_config' );
-
 		if(! isset($standalone_options)) return array();
 
 		$data = array();
 		foreach($params as $key => $value) {
-			if($column = $this->digit_get_index_by_value($standalone_options, $key)) {
+			if($column = $this->flores_get_index_by_value($standalone_options, $key)) {
 				$data[$column] = $value;
 			}
 
-            if($key == 'campaign_id' && empty($data['campaign_id'])) {
-                $data['campaign_id'] = $value;
-            } elseif($key == 'adset_id' && empty($data['adset_id'])) {
-                $data['adset_id'] = $value;
-            } elseif($key == 'ad_id' && empty($data['ad_id'])) {
-                $data['ad_id'] = $value;
-            }
+			if($key == 'campaign_id' && empty($data['campaign_id'])) {
+				$data['campaign_id'] = $value;
+			} elseif($key == 'adset_id' && empty($data['adset_id'])) {
+				$data['adset_id'] = $value;
+			} elseif($key == 'ad_id' && empty($data['ad_id'])) {
+				$data['ad_id'] = $value;
+			}
 		}
 
-		if(isset($params['florex_id']) && ! empty($params['florex_id'])) $data['ad_id'] = $params['florex_id'];
+		if(isset($params['flores_id']) && ! empty($params['flores_id'])) $data['ad_id'] = $params['flores_id'];
 
-		//if(! isset($data['campaign_id'])) return array();
 		$url = "/";
 		if(filter_input(INPUT_SERVER, 'REQUEST_URI') && ! current_user_can('administrator')) {
 			$url = (strtok(filter_input(INPUT_SERVER, 'REQUEST_URI'), "?"));
-			if(strpos($url, ".") !== false) $url = "/"; // contains dot, probably has suffix (e.g. .ico .png .jpg)
+			if(strpos($url, ".") !== false) $url = "/";
 		}
 
 		if(isset($data['site_source_name'])) {
-			$utm_source = $this->digit_group_landing_url($data['site_source_name']);
+			$utm_source = $this->flores_group_landing_url($data['site_source_name']);
 		} elseif(isset($url)) {
-			$utm_source = $this->digit_group_landing_url($url);
+			$utm_source = $this->flores_group_landing_url($url);
 		} else {
 			$utm_source = "undefined";
 		}
-
 
 		if(isset($url) && ! $this->db_manager->getUserMeta($hash, 
 			$url,
@@ -320,11 +252,9 @@ class Florex_Woocommerce_Public {
 			$data['ad_id'] ?? null,  
 			$data['placement'] ?? null)) {
 
-				//error_log(gmdate("Y-m-d H:i:s").": $hash data doesnt exist: ".($url ?? null)." ".($utm_source ?? null)." ".json_encode($data));
-
 			$this->db_manager->insertUserMeta(
 				$hash, 
-				null, //id_order 
+				null,
 				$url,
 				$utm_source ?? null,
 				$data['utm_medium'] ?? "undefined",  
@@ -336,7 +266,6 @@ class Florex_Woocommerce_Public {
 				$data['ad_id'] ?? null,  
 				$data['placement'] ?? null
 			);
-
 		}
 
 		if(isset($data['campaign_name']) || isset($data['adset_name']) || isset($data['ad_name']) || isset($data['campaign_id']) || isset($data['adset_id']) || isset($data['ad_id'])) {
@@ -349,28 +278,27 @@ class Florex_Woocommerce_Public {
 				$data['adset_id'] ?? null, 
 				$data['ad_id'] ?? null)) {
 	
-					$this->db_manager->insertUserAttribution(
-						$hash, 
-						$data['campaign_name'] ?? null, 
-						$data['adset_name'] ?? null, 
-						$data['ad_name'] ?? null, 
-						$data['campaign_id'] ?? null, 
-						$data['adset_id'] ?? null, 
-						$data['ad_id'] ?? null
-					);
-	
+				$this->db_manager->insertUserAttribution(
+					$hash, 
+					$data['campaign_name'] ?? null, 
+					$data['adset_name'] ?? null, 
+					$data['ad_name'] ?? null, 
+					$data['campaign_id'] ?? null, 
+					$data['adset_id'] ?? null, 
+					$data['ad_id'] ?? null
+				);
 			}
 		}	
 	}
 
-	public function digit_standalone_order_processed($order_id, $posted_data, $order) {
+	public function flores_order_processed($order_id, $posted_data, $order) {
 
 		if ( ! $order_id ) return;
 
 		$order = wc_get_order( $order_id );
 
 		// Allow code execution only once 
-		if( ! get_post_meta( $order_id, '_dig_tracking_thankyou_action_done', true ) ) {
+		if( ! get_post_meta( $order_id, '_flores_tracking_done', true ) ) {
 
 			$hash = (isset($_COOKIE['stdln_hash'])) ? sanitize_key($_COOKIE['stdln_hash']) : null;
 
@@ -386,14 +314,54 @@ class Florex_Woocommerce_Public {
 
 				$journey = $this->db_manager->getOrderJourney($order_id);
 				if(! empty($journey)) {
-					$order->update_meta_data( '_flx_journey', json_encode($journey) );
+					$order->update_meta_data( '_flores_journey', json_encode($journey) );
+
+					// Save individual meta fields for easy search/filter
+					$attribution_entry = $this->get_best_attribution_entry($journey);
+					if ($attribution_entry) {
+						$meta_map = [
+							'_flores_utm_source'    => 'utm_source',
+							'_flores_utm_medium'    => 'utm_medium',
+							'_flores_campaign_name' => 'campaign_name',
+							'_flores_campaign_id'   => 'campaign_id',
+							'_flores_adset_name'    => 'adset_name',
+							'_flores_adset_id'      => 'adset_id',
+							'_flores_ad_name'       => 'ad_name',
+							'_flores_ad_id'         => 'ad_id',
+							'_flores_landing_page'  => 'landing',
+							'_flores_placement'     => 'placement',
+						];
+
+						foreach ($meta_map as $meta_key => $field) {
+							if (isset($attribution_entry->$field) && !empty($attribution_entry->$field)) {
+								$order->update_meta_data($meta_key, $attribution_entry->$field);
+							}
+						}
+					}
 				}
 			}
 
-            $order->update_meta_data( '_dig_tracking_thankyou_action_done', true );
+			$order->update_meta_data( '_flores_tracking_done', true );
 			$order->save();
-        }
-    }
+		}
+	}
+
+	/**
+	 * Get the best attribution entry from journey (first non-direct, or first if all direct)
+	 */
+	private function get_best_attribution_entry($journey) {
+		if (!is_array($journey) || empty($journey)) return null;
+
+		// Try to find first non-direct entry
+		foreach ($journey as $entry) {
+			if (isset($entry->utm_source) && $entry->utm_source !== 'direct' && !empty($entry->utm_source)) {
+				return $entry;
+			}
+		}
+
+		// All direct — return first entry
+		return $journey[0];
+	}
 
 	function _bot_detected() {
 		return (
@@ -402,49 +370,43 @@ class Florex_Woocommerce_Public {
 		);
 	}
 
-	function digit_validation_disable_cod_prevent_spam( $fields, $errors ) {
+	function flores_validation_disable_cod_prevent_spam( $fields, $errors ) {
 		global $wpdb;
-		
 
 		$email = $fields['billing_email'];
-
 		$gmt_offset = get_option('gmt_offset');
 
 		$hours_from = (isset($this->duplicate_options['restriction_time'])) ? $this->duplicate_options['restriction_time'] : 24;
 		$hours_from += $gmt_offset ?? 0;
 		$date_from = gmdate("Y-m-d H:i:s", strtotime("-$hours_from hours"));
 		$date_to = gmdate("Y-m-d H:i:s", strtotime("$gmt_offset hours"));
-		$post_status = implode("','", array('wc-failed', 'wc-cancelled') );
 
 		$orders = $wpdb->get_results( $wpdb->prepare(
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-					"SELECT id FROM {$wpdb->posts} 
-					WHERE post_type = %s 
-					AND post_status NOT IN ('wc-failed', 'wc-cancelled') 
-					AND post_date BETWEEN %s AND %s
-				", 'shop_order', $date_from, $date_to) );
+			"SELECT id FROM {$wpdb->posts} 
+			WHERE post_type = %s 
+			AND post_status NOT IN ('wc-failed', 'wc-cancelled') 
+			AND post_date BETWEEN %s AND %s
+		", 'shop_order', $date_from, $date_to) );
 
 		$payment_method = $fields['payment_method'];
 
 		if($orders) {
 			foreach($orders as $order) {
-			$order = wc_get_order($order->id);
-			if($email == $order->get_billing_email() && $payment_method == 'cod') {
-				$order_number = $order->get_order_number();
+				$order = wc_get_order($order->id);
+				if($email == $order->get_billing_email() && $payment_method == 'cod') {
+					$order_number = $order->get_order_number();
+					$order_date = strtotime($order->get_date_created()) + ($gmt_offset * 3600);
+					$datum = gmdate('j.n.Y', ($order_date));
+					$ura = gmdate('H:i', ($order_date));
 
-				$order_date = strtotime($order->get_date_created()) + ($gmt_offset * 3600);
+					$text = $this->duplicate_options['order_prevention_text'];
+					$text = str_replace("[date_of_order]", $datum, $text);
+					$text = str_replace("[time_of_order]", $ura, $text);
+					$text = str_replace("[order_number]", $order_number, $text);
 
-				$datum = gmdate('j.n.Y', ($order_date));
-				$ura = gmdate('H:i', ($order_date));
-
-				$text = $this->duplicate_options['order_prevention_text'];
-				$text = str_replace("[date_of_order]", $datum, $text);
-				$text = str_replace("[time_of_order]", $ura, $text);
-				$text = str_replace("[order_number]", $order_number, $text);
-
-				$errors->add( 'validation', esc_html($text));
-				break;
-			}
+					$errors->add( 'validation', esc_html($text));
+					break;
+				}
 			}
 		}
 	}

@@ -3,20 +3,20 @@
 /**
  * Database manipulating helper functions
  *
- * @link       https://2digit.eu/
+ * @link       https://noriks.com/
  * @since      1.0.0
  *
- * @package    Florex_Woocommerce
- * @subpackage Florex_Woocommerce/public/partials
+ * @package    Flores_Woocommerce
+ * @subpackage Flores_Woocommerce/public/partials
  */
 
 /**
  *
- * @package    Florex_Woocommerce
- * @subpackage Florex_Woocommerce/public/partials
- * @author     2DIGIT d.o.o. <florjan@2digit.eu>
+ * @package    Flores_Woocommerce
+ * @subpackage Flores_Woocommerce/public/partials
+ * @author     Noriks <dev@noriks.com>
  */
-class Florex_Woocommerce_Db_Manager {
+class Flores_Woocommerce_Db_Manager {
 
     /**
      * Remove user from db

@@ -1,34 +1,16 @@
 <?php
 
 /**
- * Fired during plugin activation
- *
- * @link       https://#
- * @since      1.0.0
- *
- * @package    Florex_Woocommerce
- * @subpackage Florex_Woocommerce/includes
- */
-
-/**
  * Fired during plugin activation.
  *
- * This class defines all code necessary to run during the plugin's activation.
- *
+ * @link       https://noriks.com
  * @since      1.0.0
- * @package    Florex_Woocommerce
- * @subpackage Florex_Woocommerce/includes
- * @author     2DIGIT d.o.o. <florjan@2digit.eu>
+ * @package    Flores_Woocommerce
+ * @subpackage Flores_Woocommerce/includes
  */
-class Florex_Woocommerce_Activator {
 
-	/**
-	 * Short Description. (use period)
-	 *
-	 * Long Description.
-	 *
-	 * @since    1.0.0
-	 */
+class Flores_Woocommerce_Activator {
+
 	public static function activate() {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -36,8 +18,7 @@ class Florex_Woocommerce_Activator {
 		global $wpdb;
 
 		/**
-		 * 
-		 * digit_tracking_user_meta table (holds user product prices)
+		 * digit_tracking_user_meta table (holds user journey data)
 		 */
 		$tablename = $wpdb->prefix.'digit_tracking_user_meta'; 
 
@@ -65,11 +46,9 @@ class Florex_Woocommerce_Activator {
 		if ( ! $wpdb->get_var( $query ) == $tablename ) {
 			maybe_create_table( $wpdb->prefix . $tablename, $main_sql_create );
 		}
-		
 
 		/**
-		 * 
-		 * digit_tracking_user_attribution table (holds triggered events sent to pixel)
+		 * digit_tracking_user_attribution table
 		 */
 		$tablename = $wpdb->prefix.'digit_tracking_user_attribution'; 
 
@@ -94,8 +73,7 @@ class Florex_Woocommerce_Activator {
 		}
 
 		/**
-		 * 
-		 * digit_tracking_user_pixel_events table (holds triggered events sent to pixel)
+		 * digit_tracking_user_pixel_events table
 		 */
 		$tablename = $wpdb->prefix.'digit_tracking_user_pixel_events'; 
 		$reference = $wpdb->prefix.'digit_tracking_user_attribution'; 
@@ -118,7 +96,6 @@ class Florex_Woocommerce_Activator {
 		}
 
 		/**
-		 * 
 		 * digit_tracking_sku_events table (holds visitors per SKU)
 		 */
 		$tablename = $wpdb->prefix.'digit_tracking_sku_events'; 
@@ -139,5 +116,4 @@ class Florex_Woocommerce_Activator {
 			maybe_create_table( $wpdb->prefix . $tablename, $main_sql_create );
 		}
 	}
-
 }
