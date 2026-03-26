@@ -352,7 +352,7 @@ class Flores_Woocommerce_Db_Manager {
     }
 
     /**
-     * Get products for Florex
+     * Get products for Flores
      * 
      * @param int $page     The page number.
      * @param int $per_page The number of products per page.
@@ -408,7 +408,7 @@ class Flores_Woocommerce_Db_Manager {
     }
 
     /**
-     * Get sku metrics for Florex
+     * Get sku metrics for Flores
      * 
      * @return array|false
      */

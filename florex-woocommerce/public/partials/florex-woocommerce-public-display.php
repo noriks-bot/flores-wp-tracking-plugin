@@ -8,8 +8,8 @@
  * @link       https://#
  * @since      1.0.0
  *
- * @package    Florex_Woocommerce
- * @subpackage Florex_Woocommerce/public/partials
+ * @package    Flores_Woocommerce
+ * @subpackage Flores_Woocommerce/public/partials
  */
 ?>
 
