@@ -78,6 +78,47 @@ class Flores_Woocommerce_Public {
 						$params[$key] = $value;
 					}
 				}
+
+				// Facebook Ads: capture campaignID, adID, adSetID parameters
+				if(isset($_GET['campaignID']) && !empty($_GET['campaignID'])) {
+					$params['campaign_id'] = sanitize_text_field($_GET['campaignID']);
+				}
+				if(isset($_GET['adID']) && !empty($_GET['adID'])) {
+					$params['ad_id'] = sanitize_text_field($_GET['adID']);
+				}
+				if(isset($_GET['adSetID']) && !empty($_GET['adSetID'])) {
+					$params['adset_id'] = sanitize_text_field($_GET['adSetID']);
+				}
+
+				// Auto-detect Facebook source from fbclid
+				if(isset($_GET['fbclid']) && !empty($_GET['fbclid'])) {
+					if(!isset($params['utm_source']) || $params['utm_source'] == 'direct') {
+						$params['utm_source'] = 'facebook';
+					}
+					if(!isset($params['utm_medium']) || empty($params['utm_medium'])) {
+						$params['utm_medium'] = 'paid';
+					}
+				}
+
+				// Google Ads: capture gclid
+				if(isset($_GET['gclid']) && !empty($_GET['gclid'])) {
+					if(!isset($params['utm_source']) || $params['utm_source'] == 'direct') {
+						$params['utm_source'] = 'google';
+					}
+					if(!isset($params['utm_medium']) || empty($params['utm_medium'])) {
+						$params['utm_medium'] = 'cpc';
+					}
+				}
+
+				// TikTok Ads: capture ttclid
+				if(isset($_GET['ttclid']) && !empty($_GET['ttclid'])) {
+					if(!isset($params['utm_source']) || $params['utm_source'] == 'direct') {
+						$params['utm_source'] = 'tiktok';
+					}
+					if(!isset($params['utm_medium']) || empty($params['utm_medium'])) {
+						$params['utm_medium'] = 'paid';
+					}
+				}
 			}
 
 			if ((is_singular()) && ($post_id = get_the_ID()) && (($sku = get_post_meta($post_id, '_sku', true)) || ($sku = get_post_meta($post_id, "_associated_sku", true)))) {
@@ -226,12 +267,20 @@ class Flores_Woocommerce_Public {
 			if(strpos($url, ".") !== false) $url = "/";
 		}
 
-		if(isset($data['site_source_name'])) {
+		// Use utm_source from params if set (includes fbclid/gclid/ttclid auto-detection)
+		if(isset($params['utm_source']) && $params['utm_source'] != 'direct') {
+			$utm_source = $params['utm_source'];
+		} elseif(isset($data['site_source_name'])) {
 			$utm_source = $this->flores_group_landing_url($data['site_source_name']);
 		} elseif(isset($url)) {
 			$utm_source = $this->flores_group_landing_url($url);
 		} else {
 			$utm_source = "undefined";
+		}
+
+		// Use utm_medium from params if set (includes fbclid/gclid/ttclid auto-detection)
+		if(isset($params['utm_medium']) && !empty($params['utm_medium'])) {
+			$data['utm_medium'] = $params['utm_medium'];
 		}
 
 		if(isset($url) && ! $this->db_manager->getUserMeta($hash, 
