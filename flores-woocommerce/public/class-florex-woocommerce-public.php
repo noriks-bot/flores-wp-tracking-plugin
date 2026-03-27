@@ -79,43 +79,108 @@ class Flores_Woocommerce_Public {
 					}
 				}
 
-				// Facebook Ads: capture campaignID, adID, adSetID parameters
-				if(isset($_GET['campaignID']) && !empty($_GET['campaignID'])) {
-					$params['campaign_id'] = sanitize_text_field($_GET['campaignID']);
-				}
-				if(isset($_GET['adID']) && !empty($_GET['adID'])) {
-					$params['ad_id'] = sanitize_text_field($_GET['adID']);
-				}
-				if(isset($_GET['adSetID']) && !empty($_GET['adSetID'])) {
-					$params['adset_id'] = sanitize_text_field($_GET['adSetID']);
+				// =========================================================
+				// Universal UTM parameter capture
+				// Reads ALL known UTM variants regardless of admin config
+				// =========================================================
+
+				// Standard UTM parameters (always capture if present)
+				$utm_map = [
+					'utm_source'   => 'utm_source',
+					'utm_medium'   => 'utm_medium',
+					'utm_campaign' => 'campaign_name',
+					'utm_content'  => 'adset_name',
+					'utm_term'     => 'ad_name',
+					'utm_id'       => 'campaign_id',
+				];
+				foreach($utm_map as $get_key => $param_key) {
+					if(isset($_GET[$get_key]) && !empty($_GET[$get_key]) && !isset($params[$param_key])) {
+						$params[$param_key] = sanitize_text_field($_GET[$get_key]);
+					}
 				}
 
-				// Auto-detect Facebook source from fbclid
+				// Facebook Ads parameters (campaignID, adID, adSetID)
+				$fb_map = [
+					'campaignID'   => 'campaign_id',
+					'campaign_id'  => 'campaign_id',
+					'adSetID'      => 'adset_id',
+					'adset_id'     => 'adset_id',
+					'ad_set_id'    => 'adset_id',
+					'adID'         => 'ad_id',
+					'ad_id'        => 'ad_id',
+					'flores_id'    => 'ad_id',
+					'florex_id'    => 'ad_id',
+					'h_ad_id'      => 'ad_id',
+					'fbc_id'       => 'adset_id',
+					'utm_placement'=> 'placement',
+					'placement'    => 'placement',
+				];
+				foreach($fb_map as $get_key => $param_key) {
+					if(isset($_GET[$get_key]) && !empty($_GET[$get_key]) && empty($params[$param_key])) {
+						$params[$param_key] = sanitize_text_field($_GET[$get_key]);
+					}
+				}
+
+				// =========================================================
+				// Auto-detect source from click IDs
+				// =========================================================
+
+				// Facebook (fbclid)
 				if(isset($_GET['fbclid']) && !empty($_GET['fbclid'])) {
 					if(!isset($params['utm_source']) || $params['utm_source'] == 'direct') {
 						$params['utm_source'] = 'facebook';
 					}
-					if(!isset($params['utm_medium']) || empty($params['utm_medium'])) {
+					if(empty($params['utm_medium'])) {
 						$params['utm_medium'] = 'paid';
 					}
 				}
 
-				// Google Ads: capture gclid
+				// Google Ads (gclid)
 				if(isset($_GET['gclid']) && !empty($_GET['gclid'])) {
 					if(!isset($params['utm_source']) || $params['utm_source'] == 'direct') {
 						$params['utm_source'] = 'google';
 					}
-					if(!isset($params['utm_medium']) || empty($params['utm_medium'])) {
+					if(empty($params['utm_medium'])) {
 						$params['utm_medium'] = 'cpc';
 					}
 				}
 
-				// TikTok Ads: capture ttclid
+				// TikTok (ttclid)
 				if(isset($_GET['ttclid']) && !empty($_GET['ttclid'])) {
 					if(!isset($params['utm_source']) || $params['utm_source'] == 'direct') {
 						$params['utm_source'] = 'tiktok';
 					}
-					if(!isset($params['utm_medium']) || empty($params['utm_medium'])) {
+					if(empty($params['utm_medium'])) {
+						$params['utm_medium'] = 'paid';
+					}
+				}
+
+				// Microsoft/Bing Ads (msclkid)
+				if(isset($_GET['msclkid']) && !empty($_GET['msclkid'])) {
+					if(!isset($params['utm_source']) || $params['utm_source'] == 'direct') {
+						$params['utm_source'] = 'bing';
+					}
+					if(empty($params['utm_medium'])) {
+						$params['utm_medium'] = 'cpc';
+					}
+				}
+
+				// Pinterest (epik)
+				if(isset($_GET['epik']) && !empty($_GET['epik'])) {
+					if(!isset($params['utm_source']) || $params['utm_source'] == 'direct') {
+						$params['utm_source'] = 'pinterest';
+					}
+					if(empty($params['utm_medium'])) {
+						$params['utm_medium'] = 'paid';
+					}
+				}
+
+				// Snapchat (ScCid)
+				if(isset($_GET['ScCid']) && !empty($_GET['ScCid'])) {
+					if(!isset($params['utm_source']) || $params['utm_source'] == 'direct') {
+						$params['utm_source'] = 'snapchat';
+					}
+					if(empty($params['utm_medium'])) {
 						$params['utm_medium'] = 'paid';
 					}
 				}
